@@ -13,43 +13,39 @@ window.TrelloPowerUp.initialize({
       .then(function(desc) {
         if (!desc) return [];
 
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(desc, 'text/html');
-        const codeBlocks = doc.querySelectorAll('code');
-
+        const lines = desc.split('\n');
         const buttons = [];
 
-        codeBlocks.forEach(code => {
-          const text = code.textContent.trim();
-          if (!text.startsWith('open-folder://')) return;
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i].trim();
+          const match = line.match(/^`(open-folder:\/\/[^`]+)`$/);
 
-          const rawPath = text.replace(/\\/g, '/');
+          if (match) {
+            const folderLink = match[1].replace(/\\/g, '/');
+            let label = 'Atidaryti aplanką';
 
-          // Ieškom prieš tai esančio <strong> kaip pavadinimo
-          let label = 'Atidaryti aplanką';
-          let previous = code.closest('p')?.previousElementSibling;
-
-          while (previous) {
-            const strong = previous.querySelector('strong');
-            if (strong) {
-              label = strong.textContent.trim().replace(/[:：]+$/, '');
-              break;
+            // Tikrinam ankstesnę eilutę, jei yra
+            if (i > 0) {
+              const prevLine = lines[i - 1].trim();
+              const strongMatch = prevLine.match(/^\*\*(.+?)\*\*:?$/);
+              if (strongMatch) {
+                label = strongMatch[1].trim();
+              }
             }
-            previous = previous.previousElementSibling;
+
+            buttons.push({
+              icon: 'https://cdn-icons-png.flaticon.com/512/716/716784.png',
+              text: label,
+              callback: function(t) {
+                const iframe = document.createElement('iframe');
+                iframe.style.display = 'none';
+                iframe.src = folderLink;
+                document.body.appendChild(iframe);
+                return t.closePopup();
+              }
+            });
           }
-
-          buttons.push({
-            icon: 'https://cdn-icons-png.flaticon.com/512/716/716784.png',
-            text: label,
-            callback: function(t) {
-              const iframe = document.createElement('iframe');
-              iframe.style.display = 'none';
-              iframe.src = `open-folder://${rawPath}`;
-              document.body.appendChild(iframe);
-              return t.closePopup();
-            }
-          });
-        });
+        }
 
         return buttons;
       });
