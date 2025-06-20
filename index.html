@@ -13,38 +13,43 @@ window.TrelloPowerUp.initialize({
       .then(function(desc) {
         if (!desc) return [];
 
-        const lines = desc.split('\n');
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(desc, 'text/html');
+        const codeBlocks = doc.querySelectorAll('code');
+
         const buttons = [];
 
-        for (let i = 0; i < lines.length; i++) {
-          const line = lines[i];
-          const match = line.match(/`?open-folder:\/\/([^`\n\r]+)`?/);
+        codeBlocks.forEach(code => {
+          const text = code.textContent.trim();
+          if (!text.startsWith('open-folder://')) return;
 
-          if (match) {
-            const rawPath = match[1].replace(/\\/g, '/');
+          const rawPath = text.replace(/\\/g, '/');
 
-            // Ieškome ankstesnės eilutės kaip pavadinimo
-            let label = 'Atidaryti aplanką';
-            if (i > 0) {
-              const previousLine = lines[i - 1].trim();
-              if (previousLine) {
-                label = previousLine.replace(/[:：]+$/, ''); // pašalina dvitaškį gale
-              }
+          // Ieškom prieš tai esančio <strong> kaip pavadinimo
+          let label = 'Atidaryti aplanką';
+          let previous = code.closest('p')?.previousElementSibling;
+
+          while (previous) {
+            const strong = previous.querySelector('strong');
+            if (strong) {
+              label = strong.textContent.trim().replace(/[:：]+$/, '');
+              break;
             }
-
-            buttons.push({
-              icon: 'https://cdn-icons-png.flaticon.com/512/716/716784.png',
-              text: label,
-              callback: function(t) {
-                const iframe = document.createElement('iframe');
-                iframe.style.display = 'none';
-                iframe.src = `open-folder://${rawPath}`;
-                document.body.appendChild(iframe);
-                return t.closePopup();
-              }
-            });
+            previous = previous.previousElementSibling;
           }
-        }
+
+          buttons.push({
+            icon: 'https://cdn-icons-png.flaticon.com/512/716/716784.png',
+            text: label,
+            callback: function(t) {
+              const iframe = document.createElement('iframe');
+              iframe.style.display = 'none';
+              iframe.src = `open-folder://${rawPath}`;
+              document.body.appendChild(iframe);
+              return t.closePopup();
+            }
+          });
+        });
 
         return buttons;
       });
