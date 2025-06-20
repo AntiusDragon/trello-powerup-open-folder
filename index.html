@@ -13,29 +13,35 @@ window.TrelloPowerUp.initialize({
       .then(function(desc) {
         if (!desc) return [];
 
-        // Rasti visus open-folder:// įrašus
-        const regex = /open-folder:\/\/[^`]+/g;
-        const matches = desc.match(regex);
-        if (!matches) return [];
+        const lines = desc.split('\n');
+        const buttons = [];
 
-        return matches.map(function(linkRaw) {
-          // Pakeisti \ į / naršyklės suderinamumui
-          const sanitizedLink = linkRaw.replace(/\\/g, '/');
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i];
+          const match = line.match(/`open-folder:\/\/([^`]+)`/);
 
-          return {
-            icon: 'https://cdn-icons-png.flaticon.com/512/716/716784.png',
-            text: 'Atidaryti aplanką',
-            callback: function(t) {
-              // Sukurti nematomą iframe ir įkelti nuorodą
-              const iframe = document.createElement('iframe');
-              iframe.style.display = 'none';
-              iframe.src = sanitizedLink;
-              document.body.appendChild(iframe);
+          if (match) {
+            // Gauti aplanko kelią ir pavadinimą iš prieš tai esančios eilutės
+            const rawPath = match[1].replace(/\\/g, '/');
+            const labelLine = lines[i - 1] || 'Atidaryti aplanką';
+            const labelMatch = labelLine.match(/\*\*(.+?)\*\*/);
+            const label = labelMatch ? labelMatch[1] : 'Atidaryti aplanką';
 
-              return t.closePopup();
-            }
-          };
-        });
+            buttons.push({
+              icon: 'https://cdn-icons-png.flaticon.com/512/716/716784.png',
+              text: label,
+              callback: function(t) {
+                const iframe = document.createElement('iframe');
+                iframe.style.display = 'none';
+                iframe.src = `open-folder://${rawPath}`;
+                document.body.appendChild(iframe);
+                return t.closePopup();
+              }
+            });
+          }
+        }
+
+        return buttons;
       });
   }
 });

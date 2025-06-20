@@ -3,7 +3,7 @@
   "capabilities": ["card-buttons"],
   "connectors": {
     "iframe": {
-      "url": "https://antiusdragon.github.io/my-trello-powerup/"
+      "url": "https://antiusdragon.github.io/trello-powerup-open-folder/"
     }
   },
   "icon": {
