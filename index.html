@@ -18,14 +18,19 @@ window.TrelloPowerUp.initialize({
 
         for (let i = 0; i < lines.length; i++) {
           const line = lines[i];
-          const match = line.match(/`open-folder:\/\/([^`]+)`/);
+          const match = line.match(/`?open-folder:\/\/([^`\n\r]+)`?/);
 
           if (match) {
-            // Gauti aplanko kelią ir pavadinimą iš prieš tai esančios eilutės
             const rawPath = match[1].replace(/\\/g, '/');
-            const labelLine = lines[i - 1] || 'Atidaryti aplanką';
-            const labelMatch = labelLine.match(/\*\*(.+?)\*\*/);
-            const label = labelMatch ? labelMatch[1] : 'Atidaryti aplanką';
+
+            // Ieškome ankstesnės eilutės kaip pavadinimo
+            let label = 'Atidaryti aplanką';
+            if (i > 0) {
+              const previousLine = lines[i - 1].trim();
+              if (previousLine) {
+                label = previousLine.replace(/[:：]+$/, ''); // pašalina dvitaškį gale
+              }
+            }
 
             buttons.push({
               icon: 'https://cdn-icons-png.flaticon.com/512/716/716784.png',
