@@ -10,9 +10,9 @@ window.TrelloPowerUp.initialize({
   'card-buttons': function(t) {
     return t.card('desc', 'checklists', 'actions')
       .get('desc', 'checklists', 'actions')
-      .then(function(desc) {
+      .then(function(card) {
+      // .then(function(desc) {
         // if (!desc) return [];
-
         // const lines = desc.split(/\r?\n/);
         const buttons = [];
 
