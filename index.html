@@ -13,43 +13,34 @@ window.TrelloPowerUp.initialize({
       .then(function(desc) {
         if (!desc) return [];
 
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(desc, 'text/html');
-        const codeBlocks = doc.querySelectorAll('code');
-
+        // Paimam visus blokus: galimas pavadinimas + open-folder nuoroda
+        const regex = /(?:^|\n)(.*?):?\s*\n?open-folder:\/\/([^\s`]+)/g;
+        let match;
         const buttons = [];
 
-        codeBlocks.forEach(code => {
-          const text = code.textContent.trim();
-          if (!text.startsWith('open-folder://')) return;
+        while ((match = regex.exec(desc)) !== null) {
+          let title = match[1].trim();
+          const rawPath = match[2];
 
-          const rawPath = text.replace(/\\/g, '/');
-
-          // Ieškom prieš tai esančio <strong> kaip pavadinimo
-          let label = 'Atidaryti aplanką';
-          let previous = code.closest('p')?.previousElementSibling;
-
-          while (previous) {
-            const strong = previous.querySelector('strong');
-            if (strong) {
-              label = strong.textContent.trim().replace(/[:：]+$/, '');
-              break;
-            }
-            previous = previous.previousElementSibling;
+          // Jei pavadinimas panašus į patį path (ar tuščias), naudoti numatytąjį
+          if (!title || rawPath.includes(title)) {
+            title = 'Atidaryti aplanką';
           }
+
+          const sanitizedLink = 'open-folder://' + rawPath.replace(/\\/g, '/');
 
           buttons.push({
             icon: 'https://cdn-icons-png.flaticon.com/512/716/716784.png',
-            text: label,
+            text: title,
             callback: function(t) {
               const iframe = document.createElement('iframe');
               iframe.style.display = 'none';
-              iframe.src = `open-folder://${rawPath}`;
+              iframe.src = sanitizedLink;
               document.body.appendChild(iframe);
               return t.closePopup();
             }
           });
-        });
+        }
 
         return buttons;
       });
