@@ -13,27 +13,42 @@ window.TrelloPowerUp.initialize({
       .then(function(desc) {
         if (!desc) return [];
 
-        const lines = desc.split('\n');
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(desc, 'text/html');
+        const codeBlocks = doc.querySelectorAll('code');
+
         const buttons = [];
 
-        lines.forEach(line => {
-          const match = /open-folder:\/\/[^`]+/g;
-          if (match) {
-            const label = match[1].trim();
-            const folderUrl = match[2].replace(/\\/g, '/');
+        codeBlocks.forEach(code => {
+          const text = code.textContent.trim();
+          if (!text.startsWith('open-folder://')) return;
 
-            buttons.push({
-              icon: 'https://cdn-icons-png.flaticon.com/512/716/716784.png',
-              text: label,
-              callback: function(t) {
-                const iframe = document.createElement('iframe');
-                iframe.style.display = 'none';
-                iframe.src = folderUrl;
-                document.body.appendChild(iframe);
-                return t.closePopup();
-              }
-            });
+          const rawPath = text.replace(/\\/g, '/');
+
+          // Ieškom prieš tai esančio <strong> kaip pavadinimo
+          let label = 'Atidaryti aplanką';
+          let previous = code.closest('p')?.previousElementSibling;
+
+          while (previous) {
+            const strong = previous.querySelector('strong');
+            if (strong) {
+              label = strong.textContent.trim().replace(/[:：]+$/, '');
+              break;
+            }
+            previous = previous.previousElementSibling;
           }
+
+          buttons.push({
+            icon: 'https://cdn-icons-png.flaticon.com/512/716/716784.png',
+            text: label,
+            callback: function(t) {
+              const iframe = document.createElement('iframe');
+              iframe.style.display = 'none';
+              iframe.src = `open-folder://${rawPath}`;
+              document.body.appendChild(iframe);
+              return t.closePopup();
+            }
+          });
         });
 
         return buttons;
