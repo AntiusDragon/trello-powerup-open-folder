@@ -8,72 +8,51 @@
 <script>
 window.TrelloPowerUp.initialize({
   'card-buttons': function(t) {
-    return t.card('desc', 'checklists', 'actions')
-      .get('desc', 'checklists', 'actions')
-      .then(function(card) {
+    return t.card('checklists')
+      .get('checklists')
+      .then(function(checklists) {
+        if (!checklists) return [];
+
+        const lines = checklists.split(/\r?\n/);
         const buttons = [];
 
-        // ----------- 1. Aprašymo analizė ------------
-        extractLinksFromText(card.desc, buttons);
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i].trim();
 
-        // ----------- 2. Checklist analizė ------------
-        if (card.checklists) {
-          card.checklists.forEach(cl => {
-            cl.checkItems.forEach(item => {
-              extractLinksFromText(item.name, buttons);
-            });
-          });
-        }
+          // Jei tai yra `open-folder://` eilutė
+          if (line.startsWith('`open-folder://') && line.endsWith('`')) {
+            // Pašalinti `` simbolius ir pakeisti \ į /
+            const rawPath = line.slice(1, -1).replace(/\\/g, '/');
 
-        // ----------- 3. Komentarų analizė ------------
-        if (card.actions) {
-          card.actions.forEach(action => {
-            if (action.type === 'commentCard' && action.data.text) {
-              extractLinksFromText(action.data.text, buttons);
+            // Ieškome viršuje esančio **Pavadinimo:**
+            let label = 'Atidaryti aplanką';
+            for (let j = i - 1; j >= 0; j--) {
+              const prevLine = lines[j].trim();
+              const match = /^\*\*(.+?)\*\*[:]?$/.exec(prevLine);
+              if (match) {
+                label = match[1].trim();
+                break;
+              }
             }
-          });
+
+            buttons.push({
+              icon: 'https://cdn-icons-png.flaticon.com/512/716/716784.png',
+              text: label,
+              callback: function(t) {
+                const iframe = document.createElement('iframe');
+                iframe.style.display = 'none';
+                iframe.src = rawPath;
+                document.body.appendChild(iframe);
+                return t.closePopup();
+              }
+            });
+          }
         }
 
         return buttons;
       });
   }
 });
-
-// 🔍 Ištraukimo funkcija
-function extractLinksFromText(text, buttonsArray) {
-  const lines = text.split(/\r?\n/);
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim();
-
-    if (line.startsWith('`open-folder://') && line.endsWith('`')) {
-      const rawPath = line.slice(1, -1).replace(/\\/g, '/');
-
-      // Paieška viršuje esančio pavadinimo **Pavadinimas:**
-      let label = 'Atidaryti aplanką';
-      for (let j = i - 1; j >= 0; j--) {
-        const prevLine = lines[j].trim();
-        const match = /^\*\*(.+?)\*\*[:]?$/.exec(prevLine);
-        if (match) {
-          label = match[1].trim();
-          break;
-        }
-      }
-
-      buttonsArray.push({
-        icon: 'https://cdn-icons-png.flaticon.com/512/716/716784.png',
-        text: label,
-        callback: function(t) {
-          const iframe = document.createElement('iframe');
-          iframe.style.display = 'none';
-          iframe.src = rawPath;
-          document.body.appendChild(iframe);
-          return t.closePopup();
-        }
-      });
-    }
-  }
-}
 </script>
 </body>
 </html>
