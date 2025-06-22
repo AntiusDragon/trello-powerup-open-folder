@@ -13,33 +13,40 @@ window.TrelloPowerUp.initialize({
       .then(function(desc) {
         if (!desc) return [];
 
-        // Paimam visus blokus: galimas pavadinimas + open-folder nuoroda
-        const regex = /(?:^|\n)(.*?):?\s*\n?open-folder:\/\/([^\s`]+)/g;
-        let match;
+        const lines = desc.split(/\r?\n/);
         const buttons = [];
 
-        while ((match = regex.exec(desc)) !== null) {
-          let title = match[1].trim();
-          const rawPath = match[2];
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i].trim();
 
-          // Jei pavadinimas panašus į patį path (ar tuščias), naudoti numatytąjį
-          if (!title || rawPath.includes(title)) {
-            title = 'Atidaryti aplanką';
-          }
+          // Jei tai yra `open-folder://` eilutė
+          if (line.startsWith('`open-folder://') && line.endsWith('`')) {
+            // Pašalinti `` simbolius ir pakeisti \ į /
+            const rawPath = line.slice(1, -1).replace(/\\/g, '/');
 
-          const sanitizedLink = 'open-folder://' + rawPath.replace(/\\/g, '/');
-
-          buttons.push({
-            icon: 'https://cdn-icons-png.flaticon.com/512/716/716784.png',
-            text: title,
-            callback: function(t) {
-              const iframe = document.createElement('iframe');
-              iframe.style.display = 'none';
-              iframe.src = sanitizedLink;
-              document.body.appendChild(iframe);
-              return t.closePopup();
+            // Ieškome viršuje esančio **Pavadinimo:**
+            let label = 'Atidaryti aplanką';
+            for (let j = i - 1; j >= 0; j--) {
+              const prevLine = lines[j].trim();
+              const match = /^\*\*(.+?)\*\*[:]?$/.exec(prevLine);
+              if (match) {
+                label = match[1].trim();
+                break;
+              }
             }
-          });
+
+            buttons.push({
+              icon: 'https://cdn-icons-png.flaticon.com/512/716/716784.png',
+              text: label,
+              callback: function(t) {
+                const iframe = document.createElement('iframe');
+                iframe.style.display = 'none';
+                iframe.src = rawPath;
+                document.body.appendChild(iframe);
+                return t.closePopup();
+              }
+            });
+          }
         }
 
         return buttons;
