@@ -15,27 +15,35 @@ window.TrelloPowerUp.initialize({
 
         const lines = desc.split('\n');
         const buttons = [];
+        let previousLabel = null;
 
         lines.forEach(line => {
-          // Ieško eilučių pagal formatą: "Pavadinimas: open-folder://..."
-          const match = line.match(/^(.+?):\s*`(open-folder:\/\/.+?)`$/i);
+          line = line.trim();
+
+          // Jei eilutė baigiasi dvitaškiu – laikoma pavadinimu
+          if (line.endsWith(':')) {
+            previousLabel = line.slice(0, -1).trim();
+            return; // pereinam prie kitos eilutės
+          }
+
+          // Jei tai open-folder:// nuoroda
+          const match = line.match(/^(open-folder:\/\/.+)$/i);
           if (match) {
-            const label = match[1].trim(); // Pvz: Test1
-            const folderUrlRaw = match[2].trim(); // Pvz: open-folder://AntiusDragon\Disk1
-            const folderUrl = folderUrlRaw.replace(/\\/g, '/'); // Naršyklės suderinamumui
+            const folderUrl = match[1].replace(/\\/g, '/');
 
             buttons.push({
               icon: 'https://cdn-icons-png.flaticon.com/512/716/716784.png',
-              text: label, // rodomas pavadinimas, pvz. "Test1"
+              text: previousLabel || 'Atidaryti aplanką',
               callback: function(t) {
-                try {
-                  window.location.href = folderUrl;
-                } catch (err) {
-                  console.error('Nepavyko atidaryti aplanko:', err);
-                }
+                const iframe = document.createElement('iframe');
+                iframe.style.display = 'none';
+                iframe.src = folderUrl;
+                document.body.appendChild(iframe);
                 return t.closePopup();
               }
             });
+
+            previousLabel = null; // sunaudojam pavadinimą vieną kartą
           }
         });
 
