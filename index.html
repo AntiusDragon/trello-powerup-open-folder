@@ -15,25 +15,16 @@ window.TrelloPowerUp.initialize({
 
         const lines = desc.split('\n');
         const buttons = [];
-        let previousLabel = null;
 
         lines.forEach(line => {
-          line = line.trim();
-
-          // Jei eilutė baigiasi dvitaškiu – laikoma pavadinimu
-          if (line.endsWith(':')) {
-            previousLabel = line.slice(0, -1).trim();
-            return; // pereinam prie kitos eilutės
-          }
-
-          // Jei tai open-folder:// nuoroda
-          const match = line.match(/^(open-folder:\/\/.+)$/i);
+          const match = /open-folder:\/\/[^`]+/g;
           if (match) {
-            const folderUrl = match[1].replace(/\\/g, '/');
+            const label = match[1].trim();
+            const folderUrl = match[2].replace(/\\/g, '/');
 
             buttons.push({
               icon: 'https://cdn-icons-png.flaticon.com/512/716/716784.png',
-              text: previousLabel || 'Atidaryti aplanką',
+              text: label,
               callback: function(t) {
                 const iframe = document.createElement('iframe');
                 iframe.style.display = 'none';
@@ -42,8 +33,6 @@ window.TrelloPowerUp.initialize({
                 return t.closePopup();
               }
             });
-
-            previousLabel = null; // sunaudojam pavadinimą vieną kartą
           }
         });
 
