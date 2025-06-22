@@ -6,53 +6,75 @@
 </head>
 <body>
 <script>
-window.TrelloPowerUp.initialize({
-  'card-buttons': function(t) {
-    return t.card('checklists')
-      .get('checklists')
-      .then(function(checklists) {
-        if (!checklists) return [];
+  const extractLinksFromText = (text, buttonsArray) => {
+    if (!text) return;
 
-        const lines = checklists.split(/\r?\n/);
-        const buttons = [];
+    const lines = text.split(/\r?\n/);
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
 
-        for (let i = 0; i < lines.length; i++) {
-          const line = lines[i].trim();
+      const folderMatch = line.match(/^`(open-folder:\/\/[^`]+)`$/);
+      if (folderMatch) {
+        const rawPath = folderMatch[1].replace(/\\/g, '/');
 
-          // Jei tai yra `open-folder://` eilutė
-          if (line.startsWith('`open-folder://') && line.endsWith('`')) {
-            // Pašalinti `` simbolius ir pakeisti \ į /
-            const rawPath = line.slice(1, -1).replace(/\\/g, '/');
-
-            // Ieškome viršuje esančio **Pavadinimo:**
-            let label = 'Atidaryti aplanką';
-            for (let j = i - 1; j >= 0; j--) {
-              const prevLine = lines[j].trim();
-              const match = /^\*\*(.+?)\*\*[:]?$/.exec(prevLine);
-              if (match) {
-                label = match[1].trim();
-                break;
-              }
-            }
-
-            buttons.push({
-              icon: 'https://cdn-icons-png.flaticon.com/512/716/716784.png',
-              text: label,
-              callback: function(t) {
-                const iframe = document.createElement('iframe');
-                iframe.style.display = 'none';
-                iframe.src = rawPath;
-                document.body.appendChild(iframe);
-                return t.closePopup();
-              }
-            });
+        // Paieška pavadinimo virš šios eilutės
+        let label = 'Atidaryti aplanką';
+        for (let j = i - 1; j >= 0; j--) {
+          const prevLine = lines[j].trim();
+          const nameMatch = prevLine.match(/^\*\*(.+?)\*\*:?$/);
+          if (nameMatch) {
+            label = nameMatch[1].trim();
+            break;
           }
         }
 
-        return buttons;
-      });
-  }
-});
+        buttonsArray.push({
+          icon: 'https://cdn-icons-png.flaticon.com/512/716/716784.png',
+          text: label,
+          callback: function(t) {
+            const iframe = document.createElement('iframe');
+            iframe.style.display = 'none';
+            iframe.src = rawPath;
+            document.body.appendChild(iframe);
+            return t.closePopup();
+          }
+        });
+      }
+    }
+  };
+
+  window.TrelloPowerUp.initialize({
+    'card-buttons': function(t) {
+      return t.card('desc', 'checklists', 'actions')
+        .get('desc', 'checklists', 'actions')
+        .then(function(card) {
+          const buttons = [];
+
+          // Iš aprašymo
+          extractLinksFromText(card.desc, buttons);
+
+          // Iš checklistų
+          if (card.checklists) {
+            card.checklists.forEach(cl => {
+              cl.checkItems.forEach(item => {
+                extractLinksFromText(item.name, buttons);
+              });
+            });
+          }
+
+          // Iš komentarų
+          if (card.actions) {
+            card.actions.forEach(action => {
+              if (action.type === 'commentCard') {
+                extractLinksFromText(action.data.text, buttons);
+              }
+            });
+          }
+
+          return buttons;
+        });
+    }
+  });
 </script>
 </body>
 </html>
